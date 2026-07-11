@@ -29,18 +29,33 @@
         "pnpm": ">=11.0.0"
     },
     "scripts": {
-        "dev": "pnpm --dir web dev",
-        "build": "pnpm --dir web build",
-        "start": "pnpm --dir web start",
-        "lint": "pnpm --dir web lint",
-        "lint:fix": "pnpm --dir web lint:fix",
-        "format": "pnpm --dir web format",
-        "typecheck": "pnpm --dir web typecheck",
-        "check": "pnpm --dir web check",
-        "db:generate": "pnpm --dir web db:generate",
-        "db:migrate": "pnpm --dir web db:migrate",
-        "db:push": "pnpm --dir web db:push",
-        "db:pull": "pnpm --dir web db:pull",
-        "db:studio": "pnpm --dir web db:studio"
+        "prepare": "husky",
+        "dev": "pnpm --filter @ohara/web dev",
+        "dev:web": "pnpm --filter @ohara/web dev",
+        "dev:api": "cd api && air",
+        "build:web": "pnpm --filter @ohara/web build",
+        "build:api": "cd api && go build -o bin/api ./cmd/api",
+        "start": "pnpm --filter @ohara/web start",
+        "lint": "pnpm --filter @ohara/web lint",
+        "lint:fix": "pnpm --filter @ohara/web lint:fix",
+        "format": "pnpm --filter @ohara/web format",
+        "typecheck": "pnpm --filter @ohara/web typecheck",
+        "check": "pnpm --filter @ohara/web check",
+        "test:api": "cd api && go test ./...",
+        "lint:api": "cd api && go vet ./...",
+        "db:generate": "pnpm --filter @ohara/web db:generate",
+        "db:migrate": "pnpm --filter @ohara/web db:migrate",
+        "db:push": "pnpm --filter @ohara/web db:push",
+        "db:pull": "pnpm --filter @ohara/web db:pull",
+        "db:studio": "pnpm --filter @ohara/web db:studio"
+    },
+    "devDependencies": {
+        "husky": "^9.1.7",
+        "lint-staged": "^17.0.8"
+    },
+    "lint-staged": {
+        "web/**/*.{js,jsx,ts,tsx,json,css,md}": [
+            "pnpm --filter @ohara/web exec biome check --write"
+        ]
     }
 }
