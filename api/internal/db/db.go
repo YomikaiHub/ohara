@@ -1,38 +1,33 @@
+// Package db provides PostgreSQL connection management.
 package db
 
 import (
 	"context"
 	"database/sql"
-	"log"
 	"time"
 
 	_ "github.com/lib/pq"
+
+	"github.com/YomikaiHub/ohara/api/internal/config"
 )
 
-func New(addr string, maxOpenConns, maxIdleConns int, maxIdleTime string) (*sql.DB, error) {
-	db, err := sql.Open("postgres", addr)
+func New(cfg config.DBConfig) (*sql.DB, error) {
+	db, err := sql.Open("postgres", cfg.URL)
 	if err != nil {
 		return nil, err
 	}
 
-	db.SetMaxOpenConns(maxOpenConns)
-	db.SetMaxIdleConns(maxIdleConns)
-
-	duration, err := time.ParseDuration(maxIdleTime)
-	if err != nil {
-		return nil, err
-	}
-	db.SetConnMaxIdleTime(duration)
+	db.SetMaxOpenConns(cfg.MaxOpenConns)
+	db.SetMaxIdleConns(cfg.MaxIdleConns)
+	db.SetConnMaxIdleTime(cfg.MaxIdleTime)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := db.PingContext(ctx); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, err
 	}
-
-	log.Println("database connected successfully")
 
 	return db, nil
 }
