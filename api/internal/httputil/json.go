@@ -1,4 +1,4 @@
-package main
+package httputil
 
 import (
 	"encoding/json"
@@ -20,7 +20,7 @@ type ErrorResponse struct {
 
 const maxBodyBytes = 1024 * 1024
 
-func readJSON(w http.ResponseWriter, r *http.Request, data any) error {
+func ReadJSON(w http.ResponseWriter, r *http.Request, data any) error {
 	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
 	defer r.Body.Close()
 
@@ -85,7 +85,7 @@ func readJSON(w http.ResponseWriter, r *http.Request, data any) error {
 	return nil
 }
 
-func writeJSON(w http.ResponseWriter, status int, data any, headers ...http.Header) error {
+func WriteJSON(w http.ResponseWriter, status int, data any, headers ...http.Header) error {
 	if len(headers) > 0 {
 		for key, values := range headers[0] {
 			for _, value := range values {
@@ -97,16 +97,18 @@ func writeJSON(w http.ResponseWriter, status int, data any, headers ...http.Head
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 
-	return json.NewEncoder(w).Encode(data)
+	encoder := json.NewEncoder(w)
+	encoder.SetEscapeHTML(false)
+
+	return encoder.Encode(data)
 }
 
-func writeErrorJSON(
+func WriteErrorJSON(
 	w http.ResponseWriter,
 	status int,
 	code string,
 	message string,
 ) error {
-
 	response := ErrorResponse{
 		Error: APIError{
 			Code:    code,
@@ -114,7 +116,7 @@ func writeErrorJSON(
 		},
 	}
 
-	return writeJSON(
+	return WriteJSON(
 		w,
 		status,
 		response,

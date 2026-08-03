@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 )
 
 func GetString(key, fallback string) string {
@@ -50,4 +51,15 @@ func MustGetInt(key string) int {
 	}
 
 	return val
+}
+
+func MustGetDuration(key string) time.Duration {
+	value := MustGet(key)
+
+	d, err := time.ParseDuration(value)
+	if err != nil {
+		log.Fatalf("invalid duration for %s: %v", key, err)
+	}
+
+	return d
 }

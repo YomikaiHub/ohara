@@ -2,9 +2,11 @@ package main
 
 import (
 	stdlog "log"
+	"os"
 
+	"github.com/YomikaiHub/ohara/api/internal/api"
+	"github.com/YomikaiHub/ohara/api/internal/config"
 	"github.com/YomikaiHub/ohara/api/internal/db"
-	"github.com/YomikaiHub/ohara/api/internal/env"
 	"github.com/YomikaiHub/ohara/api/internal/logger"
 	"github.com/YomikaiHub/ohara/api/internal/store"
 	"github.com/joho/godotenv"
@@ -18,45 +20,23 @@ func main() {
 		stdlog.Fatal("No env vars file found!")
 	}
 
-	cfg := &config{
-		addr:    env.GetString("ADDR", ":8080"),
-		env:     env.MustGet("ENV"),
-		version: env.GetString("VERSION", "0.0.1"),
-		db: dbConfig{
-			dbUrl:          env.MustGet("DB_URL"),
-			dbMaxOpenConns: env.GetInt("DB_MAX_OPEN_CONNS", 30),
-			dbMaxIdleConns: env.GetInt("DB_MAX_IDLE_CONNS", 30),
-			dbMaxIdleTime:  env.GetString("DB_MAX_IDLE_TIME", "15min"),
-		},
-	}
+	cfg := config.Load(version)
 
-	log := logger.New(cfg.env)
+	log := logger.New(cfg.App.Env)
 
-	db, err := db.New(
-		cfg.db.dbUrl,
-		cfg.db.dbMaxOpenConns,
-		cfg.db.dbMaxIdleConns,
-		cfg.db.dbMaxIdleTime,
-	)
+	dbConn, err := db.New(cfg.DB)
 	if err != nil {
-		stdlog.Panic(err)
+		log.Error("failed to connect to database", "error", err)
+		os.Exit(1)
 	}
-	defer db.Close()
+	log.Info("database connected")
+	defer dbConn.Close()
 
-	store := store.NewDBStorage(db)
+	store := store.New(dbConn)
 
-	app := application{
-		config: *cfg,
-		logger: log,
-		store:  store,
-	}
-
-	app.logger.Info("application starting....")
-
-	mux := app.mount()
-
-	err = app.run(mux)
-	if err != nil {
-		app.logger.Error(err.Error())
+	app := api.New(cfg, log, store)
+	if err := app.Run(); err != nil {
+		log.Error("server stopped", "error", err)
+		os.Exit(1)
 	}
 }

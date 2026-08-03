@@ -1,16 +1,17 @@
-package main
+package httputil
 
 import (
 	"log/slog"
 	"net/http"
 )
 
-func (app *application) internalServerError(
+func InternalServerError(
+	logger *slog.Logger,
 	w http.ResponseWriter,
 	r *http.Request,
 	err error,
 ) {
-	app.logger.Error(
+	logger.Error(
 		"internal server error",
 		slog.Int("status", http.StatusInternalServerError),
 		slog.String("method", r.Method),
@@ -19,7 +20,7 @@ func (app *application) internalServerError(
 		slog.String("error", err.Error()),
 	)
 
-	_ = writeErrorJSON(
+	_ = WriteErrorJSON(
 		w,
 		http.StatusInternalServerError,
 		"INTERNAL_SERVER_ERROR",
@@ -27,7 +28,8 @@ func (app *application) internalServerError(
 	)
 }
 
-func (app *application) badRequestError(
+func BadRequest(
+	logger *slog.Logger,
 	w http.ResponseWriter,
 	r *http.Request,
 	err error,
@@ -38,7 +40,7 @@ func (app *application) badRequestError(
 		message = err.Error()
 	}
 
-	app.logger.Warn(
+	logger.Warn(
 		"bad request",
 		slog.Int("status", http.StatusBadRequest),
 		slog.String("method", r.Method),
@@ -47,7 +49,7 @@ func (app *application) badRequestError(
 		slog.String("error", message),
 	)
 
-	_ = writeErrorJSON(
+	_ = WriteErrorJSON(
 		w,
 		http.StatusBadRequest,
 		"BAD_REQUEST",
@@ -55,11 +57,39 @@ func (app *application) badRequestError(
 	)
 }
 
-func (app *application) notFoundError(
+func Unauthorized(
+	logger *slog.Logger,
+	w http.ResponseWriter,
+	r *http.Request,
+	message string,
+) {
+	if message == "" {
+		message = "Invalid or expired authentication token."
+	}
+
+	logger.Warn(
+		"unauthorized access",
+		slog.Int("status", http.StatusUnauthorized),
+		slog.String("method", r.Method),
+		slog.String("path", r.URL.Path),
+		slog.String("ip", r.RemoteAddr),
+		slog.String("error", message),
+	)
+
+	_ = WriteErrorJSON(
+		w,
+		http.StatusUnauthorized,
+		"UNAUTHORIZED",
+		message,
+	)
+}
+
+func NotFound(
+	logger *slog.Logger,
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	app.logger.Warn(
+	logger.Warn(
 		"resource not found",
 		slog.Int("status", http.StatusNotFound),
 		slog.String("method", r.Method),
@@ -67,30 +97,10 @@ func (app *application) notFoundError(
 		slog.String("ip", r.RemoteAddr),
 	)
 
-	_ = writeErrorJSON(
+	_ = WriteErrorJSON(
 		w,
 		http.StatusNotFound,
 		"RESOURCE_NOT_FOUND",
 		"The requested resource was not found.",
-	)
-}
-
-func (app *application) unauthorizedError(
-	w http.ResponseWriter,
-	r *http.Request,
-) {
-	app.logger.Warn(
-		"unauthorized access",
-		slog.Int("status", http.StatusUnauthorized),
-		slog.String("method", r.Method),
-		slog.String("path", r.URL.Path),
-		slog.String("ip", r.RemoteAddr),
-	)
-
-	_ = writeErrorJSON(
-		w,
-		http.StatusUnauthorized,
-		"UNAUTHORIZED",
-		"Invalid or expired authentication token.",
 	)
 }
