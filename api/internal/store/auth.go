@@ -141,3 +141,46 @@ func (store *AuthStore) GetUserWithCredentialByEmail(
 
 	return user, account, nil
 }
+
+func (store *AuthStore) GetUserByID(
+	ctx context.Context,
+	id string,
+) (*models.User, error) {
+	query := `
+		SELECT
+			id,
+			email,
+			username,
+			first_name,
+			last_name,
+			image,
+			email_verified,
+			created_at,
+			updated_at
+		FROM users
+		WHERE id = $1;
+	`
+
+	user := &models.User{}
+
+	err := store.db.QueryRowContext(
+		ctx,
+		query,
+		id,
+	).Scan(
+		&user.ID,
+		&user.Email,
+		&user.Username,
+		&user.FirstName,
+		&user.LastName,
+		&user.Image,
+		&user.EmailVerified,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+	if err != nil {
+		return nil, errs.HandleUserError(err)
+	}
+
+	return user, nil
+}
