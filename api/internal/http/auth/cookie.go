@@ -13,18 +13,6 @@ func (h *Handler) CreateSession(
 	req *http.Request,
 	user *models.User,
 ) error {
-	accessToken, err := GenerateAccessToken(
-		user.ID,
-		user.FirstName,
-		user.LastName,
-		user.Email,
-		[]byte(h.config.JWT.Key),
-		h.config.JWT.AccessTokenTTL,
-	)
-	if err != nil {
-		return err
-	}
-
 	refreshToken, err := GenerateRefreshToken(h.config.JWT.RefreshTokenTTL)
 	if err != nil {
 		return err
@@ -41,6 +29,81 @@ func (h *Handler) CreateSession(
 		return err
 	}
 
+	accessToken, err := GenerateAccessToken(
+		user.ID,
+		session.ID,
+		user.FirstName,
+		user.LastName,
+		user.Email,
+		[]byte(h.config.JWT.Key),
+		h.config.JWT.AccessTokenTTL,
+	)
+	if err != nil {
+		return err
+	}
+
+	h.setCookies(
+		w,
+		accessToken,
+		refreshToken.PlainText,
+		session.ExpiresAt,
+	)
+
+	return nil
+}
+
+func (h *Handler) RotateSession(
+	w http.ResponseWriter,
+	req *http.Request,
+	user *models.User,
+	session *models.Session,
+) error {
+	refreshToken, err := GenerateRefreshToken(h.config.JWT.RefreshTokenTTL)
+	if err != nil {
+		return err
+	}
+
+	accessToken, err := GenerateAccessToken(
+		user.ID,
+		session.ID,
+		user.FirstName,
+		user.LastName,
+		user.Email,
+		[]byte(h.config.JWT.Key),
+		h.config.JWT.AccessTokenTTL,
+	)
+	if err != nil {
+		return err
+	}
+
+	if err := h.store.Session.RotateRefreshToken(
+		req.Context(),
+		session.ID,
+		refreshToken.Hash,
+		refreshToken.ExpiresAt,
+	); err != nil {
+		return err
+	}
+
+	session.RefreshTokenHash = refreshToken.Hash
+	session.ExpiresAt = refreshToken.ExpiresAt
+
+	h.setCookies(
+		w,
+		accessToken,
+		refreshToken.PlainText,
+		refreshToken.ExpiresAt,
+	)
+
+	return nil
+}
+
+func (h *Handler) setCookies(
+	w http.ResponseWriter,
+	accessToken string,
+	refreshToken string,
+	refreshExpiry time.Time,
+) {
 	isCookieSecure := strings.ToLower(h.config.App.Env) == "production"
 	now := time.Now()
 
@@ -58,16 +121,17 @@ func (h *Handler) CreateSession(
 		},
 	)
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "yomikai_refresh",
-		Value:    refreshToken.PlainText,
-		HttpOnly: true,
-		Secure:   isCookieSecure,
-		SameSite: http.SameSiteLaxMode,
-		Path:     "/api/v1/auth/refresh",
-		MaxAge:   int(h.config.JWT.RefreshTokenTTL.Seconds()),
-		Expires:  now.Add(h.config.JWT.RefreshTokenTTL),
-	})
-
-	return nil
+	http.SetCookie(
+		w,
+		&http.Cookie{
+			Name:     "yomikai_refresh",
+			Value:    refreshToken,
+			Path:     "/api/v1/auth/refresh",
+			HttpOnly: true,
+			Secure:   isCookieSecure,
+			SameSite: http.SameSiteLaxMode,
+			MaxAge:   int(h.config.JWT.RefreshTokenTTL.Seconds()),
+			Expires:  refreshExpiry,
+		},
+	)
 }

@@ -19,5 +19,6 @@ func RegisterRoutes(
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register/email", h.Register)
 		r.Post("/login/email", h.LoginWithEmail)
+		r.Post("/refresh", h.RefreshToken)
 	})
 }
