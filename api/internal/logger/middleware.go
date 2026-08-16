@@ -27,11 +27,17 @@ func Middleware(log *slog.Logger) func(http.Handler) http.Handler {
 
 			w.Header().Set("X-Request-ID", requestID)
 
-			next.ServeHTTP(w, r.WithContext(ctx))
+			rw := &responseWriter{
+				ResponseWriter: w,
+				status:         http.StatusOK,
+			}
+
+			next.ServeHTTP(rw, r.WithContext(ctx))
 
 			log.Info(
 				"request completed",
 				slog.String("request_id", requestID),
+				slog.Int("status", rw.status),
 				slog.String("method", r.Method),
 				slog.String("url", r.URL.Path),
 				slog.String("user_agent", r.UserAgent()),

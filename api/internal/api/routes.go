@@ -19,7 +19,7 @@ func (app *Application) mount() http.Handler {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(time.Second * 60))
 
-	r.Route("/v1", func(r chi.Router) {
+	r.Route("/api/v1", func(r chi.Router) {
 		health.RegisterRoutes(r, app.config, app.logger)
 		auth.RegisterRoutes(r, app.config, app.logger, app.store)
 	})
