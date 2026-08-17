@@ -51,3 +51,21 @@ func HandleSessionError(err error) error {
 
 	return err
 }
+
+func HandleUserUpdateError(err error) error {
+	var pqErr *pq.Error
+
+	if errors.As(err, &pqErr) {
+		switch pqErr.Code {
+		case "23505":
+			if pqErr.Constraint == "users_username_key" {
+				return ErrUsernameAlreadyExists
+			}
+
+		case "23503":
+			return ErrUserNotFound
+		}
+	}
+
+	return err
+}

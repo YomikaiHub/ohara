@@ -14,4 +14,5 @@ var (
 	ErrUsernameAlreadyExists = errors.New("username already exists")
 	ErrUserNotFound          = errors.New("user with that email or password doesn't exists")
 	ErrUnauthorized          = errors.New("not authorized to access this content")
+	ErrNoFieldsToUpdate      = errors.New("no fields to update")
 )

@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/YomikaiHub/ohara/api/internal/errs"
 	"github.com/YomikaiHub/ohara/api/internal/models"
@@ -142,45 +143,82 @@ func (store *AuthStore) GetUserWithCredentialByEmail(
 	return user, account, nil
 }
 
-func (store *AuthStore) GetUserByID(
+func (store *AuthStore) GetCredentialAccountByUserID(
 	ctx context.Context,
-	id string,
-) (*models.User, error) {
+	userID string,
+) (*models.Account, error) {
 	query := `
 		SELECT
 			id,
-			email,
-			username,
-			first_name,
-			last_name,
-			image,
-			email_verified,
+			user_id,
+			account_id,
+			provider_id,
+			password_hash,
 			created_at,
 			updated_at
-		FROM users
-		WHERE id = $1;
+		FROM accounts
+		WHERE user_id = $1
+		  AND provider_id = 'credential';
 	`
 
-	user := &models.User{}
+	account := &models.Account{}
 
 	err := store.db.QueryRowContext(
 		ctx,
 		query,
-		id,
+		userID,
 	).Scan(
-		&user.ID,
-		&user.Email,
-		&user.Username,
-		&user.FirstName,
-		&user.LastName,
-		&user.Image,
-		&user.EmailVerified,
-		&user.CreatedAt,
-		&user.UpdatedAt,
+		&account.ID,
+		&account.UserID,
+		&account.AccountID,
+		&account.ProviderID,
+		&account.PasswordHash,
+		&account.CreatedAt,
+		&account.UpdatedAt,
 	)
 	if err != nil {
-		return nil, errs.HandleUserError(err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errs.ErrUserNotFound
+		}
+
+		return nil, err
 	}
 
-	return user, nil
+	return account, nil
+}
+
+func (store *AuthStore) ChangePassword(
+	ctx context.Context,
+	userID string,
+	passwordHash string,
+) error {
+	query := `
+		UPDATE accounts
+		SET
+			password_hash = $1,
+			updated_at = NOW()
+		WHERE user_id = $2
+		  AND provider_id = 'credential';
+	`
+
+	result, err := store.db.ExecContext(
+		ctx,
+		query,
+		passwordHash,
+		userID,
+	)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return errs.ErrUserNotFound
+	}
+
+	return nil
 }
