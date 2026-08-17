@@ -6,6 +6,7 @@ import (
 
 	"github.com/YomikaiHub/ohara/api/internal/http/auth"
 	"github.com/YomikaiHub/ohara/api/internal/http/health"
+	"github.com/YomikaiHub/ohara/api/internal/http/users"
 	"github.com/YomikaiHub/ohara/api/internal/logger"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -22,6 +23,7 @@ func (app *Application) mount() http.Handler {
 	r.Route("/api/v1", func(r chi.Router) {
 		health.RegisterRoutes(r, app.config, app.logger)
 		auth.RegisterRoutes(r, app.config, app.logger, app.store)
+		users.RegisterRoutes(r, app.config, app.logger, app.store)
 	})
 
 	return r

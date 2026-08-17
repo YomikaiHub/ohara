@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/YomikaiHub/ohara/api/internal/models"
+	"github.com/YomikaiHub/ohara/api/internal/utils"
 )
 
 func (h *Handler) CreateSession(
@@ -13,7 +14,7 @@ func (h *Handler) CreateSession(
 	req *http.Request,
 	user *models.User,
 ) error {
-	refreshToken, err := GenerateRefreshToken(h.config.JWT.RefreshTokenTTL)
+	refreshToken, err := utils.GenerateRefreshToken(h.config.JWT.RefreshTokenTTL)
 	if err != nil {
 		return err
 	}
@@ -29,7 +30,7 @@ func (h *Handler) CreateSession(
 		return err
 	}
 
-	accessToken, err := GenerateAccessToken(
+	accessToken, err := utils.GenerateAccessToken(
 		user.ID,
 		session.ID,
 		user.FirstName,
@@ -58,12 +59,12 @@ func (h *Handler) RotateSession(
 	user *models.User,
 	session *models.Session,
 ) error {
-	refreshToken, err := GenerateRefreshToken(h.config.JWT.RefreshTokenTTL)
+	refreshToken, err := utils.GenerateRefreshToken(h.config.JWT.RefreshTokenTTL)
 	if err != nil {
 		return err
 	}
 
-	accessToken, err := GenerateAccessToken(
+	accessToken, err := utils.GenerateAccessToken(
 		user.ID,
 		session.ID,
 		user.FirstName,
@@ -134,4 +135,30 @@ func (h *Handler) setCookies(
 			Expires:  refreshExpiry,
 		},
 	)
+}
+
+func (h *Handler) clearAuthCookies(w http.ResponseWriter) {
+	isCookieSecure := strings.ToLower(h.config.App.Env) == "production"
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "yomikai_access",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		Expires:  time.Unix(1, 0),
+		HttpOnly: true,
+		Secure:   isCookieSecure,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "yomikai_refresh",
+		Value:    "",
+		Path:     "/api/v1/auth/refresh",
+		MaxAge:   -1,
+		Expires:  time.Unix(1, 0),
+		HttpOnly: true,
+		Secure:   isCookieSecure,
+		SameSite: http.SameSiteLaxMode,
+	})
 }

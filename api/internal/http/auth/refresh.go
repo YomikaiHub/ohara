@@ -6,6 +6,7 @@ import (
 
 	"github.com/YomikaiHub/ohara/api/internal/errs"
 	"github.com/YomikaiHub/ohara/api/internal/httputil"
+	"github.com/YomikaiHub/ohara/api/internal/utils"
 )
 
 func (h *Handler) RefreshToken(w http.ResponseWriter, req *http.Request) {
@@ -15,7 +16,7 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	refreshTokenHash := HashRefreshToken(cookie.Value)
+	refreshTokenHash := utils.HashRefreshToken(cookie.Value)
 
 	session, user, err := h.store.Session.GetSessionWithUserByRefreshTokenHash(req.Context(), refreshTokenHash)
 	if err != nil {

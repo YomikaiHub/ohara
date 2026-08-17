@@ -6,6 +6,7 @@ import "database/sql"
 type Store struct {
 	Auth    *AuthStore
 	Session *SessionStore
+	User    *UserStore
 }
 
 func New(db *sql.DB) *Store {
@@ -14,6 +15,9 @@ func New(db *sql.DB) *Store {
 			db: db,
 		},
 		Session: &SessionStore{
+			db: db,
+		},
+		User: &UserStore{
 			db: db,
 		},
 	}

@@ -1,4 +1,4 @@
-package auth
+package users
 
 import (
 	"log/slog"
@@ -17,16 +17,10 @@ func RegisterRoutes(
 ) {
 	h := New(cfg, logger, store)
 
-	r.Route("/auth", func(r chi.Router) {
-		r.Post("/register/email", h.Register)
-		r.Post("/login/email", h.LoginWithEmail)
-		r.Post("/refresh", h.RefreshToken)
+	r.Route("/users", func(r chi.Router) {
+		r.Use(middleware.AuthMiddleware([]byte(h.config.JWT.Key)))
 
-		r.Group(func(r chi.Router) {
-			r.Use(middleware.AuthMiddleware([]byte(h.config.JWT.Key)))
-
-			r.Patch("/change-password", h.ChangePassword)
-			r.Post("/logout", h.Logout)
-		})
+		r.Get("/me", h.UserInfo)
+		r.Patch("/me", h.UpdateUser)
 	})
 }
